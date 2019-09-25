@@ -43,5 +43,4 @@ class UsersDAO @Inject()(protected val dbConfigProvider: DatabaseConfigProvider)
       .withFilter(_.id === user.id)
       .update(user.copy(id = user.id)))
       .map(_ => user)
-
 }

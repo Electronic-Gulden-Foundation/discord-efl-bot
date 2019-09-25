@@ -6,7 +6,7 @@ import net.dv8tion.jda.api.entities.Message
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent
 import net.dv8tion.jda.api.events.{GenericEvent, ReadyEvent}
 import net.dv8tion.jda.api.hooks.EventListener
-import nl.egulden.discordbot.services.discord.messagehandlers.HelpMessageHandler
+import nl.egulden.discordbot.services.discord.messagehandlers.{HelpMessageHandler, MiningMessageHandler, TickerMessageHandler}
 import play.api.Logger
 import play.api.inject.ApplicationLifecycle
 
@@ -15,7 +15,9 @@ import scala.concurrent.{ExecutionContext, Future}
 @Singleton
 class DiscordMessageListener @Inject()(val jda: JDA,
                                        val lifecycle: ApplicationLifecycle,
-                                       helpMessageHandler: HelpMessageHandler)
+                                       helpMessageHandler: HelpMessageHandler,
+                                       miningMessageHandler: MiningMessageHandler,
+                                       tickerMessageHandler: TickerMessageHandler)
                                       (implicit val ec: ExecutionContext)
   extends EventListener {
 
@@ -23,6 +25,8 @@ class DiscordMessageListener @Inject()(val jda: JDA,
 
   private val handlers = Seq(
     helpMessageHandler,
+    miningMessageHandler,
+    tickerMessageHandler
   )
 
   startup()

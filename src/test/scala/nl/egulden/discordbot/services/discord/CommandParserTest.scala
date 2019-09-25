@@ -58,7 +58,7 @@ class CommandParserTest extends PlaySpec {
     }
 
     "fail to parse a tip command with too low an amount" in {
-      CommandParser.parse("!tip @username 0.000001") in {
+      CommandParser.parse("!tip @username 0.000001") match {
         case Left(config) => fail("Must fail to parse")
         case _ => succeed
       }
