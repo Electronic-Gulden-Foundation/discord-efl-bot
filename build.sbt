@@ -7,7 +7,7 @@ lazy val root = (project in file("."))
   .enablePlugins(PlayScala)
   .disablePlugins(PlayLayoutPlugin)
 
-scalaVersion := "2.13.0"
+scalaVersion := "2.13.1"
 
 libraryDependencies ++= Seq(
   guice,
@@ -19,6 +19,9 @@ libraryDependencies ++= Seq(
 
   // Discord
   "net.dv8tion" % "JDA" % "4.0.0_46",
+
+  // Utilities
+  "com.github.scopt" %% "scopt" % "4.0.0-RC2",
 
   // Test dependencies
   "org.scalatestplus.play" %% "scalatestplus-play" % "4.0.3" % Test,

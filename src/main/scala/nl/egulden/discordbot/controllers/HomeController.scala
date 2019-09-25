@@ -1,4 +1,4 @@
-package controllers
+package nl.egulden.discordbot.controllers
 
 import javax.inject._
 import net.dv8tion.jda.api.JDA

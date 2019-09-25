@@ -26,7 +26,7 @@
 
   <logger name="play" level="INFO" />
   <logger name="application" level="DEBUG" />
-  <logger name="services.discord" level="DEBUG" />
+  <logger name="nl.egulden.discordbot.services.discord" level="DEBUG" />
 
   <root level="WARN">
     <!--<appender-ref ref="ASYNCFILE" />-->

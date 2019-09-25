@@ -1,4 +1,4 @@
-package services.discord
+package nl.egulden.discordbot.services.discord
 
 import com.google.inject.AbstractModule
 import net.dv8tion.jda.api.{JDA, JDABuilder}
