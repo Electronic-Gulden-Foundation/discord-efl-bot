@@ -1,16 +1,17 @@
 package nl.egulden.discordbot.controllers
 
 import javax.inject._
-import net.dv8tion.jda.api.JDA
 import play.api.mvc._
+
+import scala.concurrent.ExecutionContext
 
 /**
  * This controller creates an `Action` to handle HTTP requests to the
  * application's home page.
  */
 @Singleton
-class HomeController @Inject()(cc: ControllerComponents,
-                               jda: JDA)
+class HomeController @Inject()(cc: ControllerComponents)
+                              (implicit ec: ExecutionContext)
   extends AbstractController(cc) {
 
   /**

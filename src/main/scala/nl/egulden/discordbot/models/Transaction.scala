@@ -1,10 +1,11 @@
 package nl.egulden.discordbot.models
 
-import java.time.LocalDateTime
-
-import javax.inject.{Inject, Singleton}
+import com.github.tototoshi.slick.MySQLJodaSupport._
+import javax.inject.Inject
 import nl.egulden.discordbot.models.TransactionStatus.TransactionStatus
 import nl.egulden.discordbot.models.TransactionType.TransactionType
+import org.joda.time.DateTime
+import play.api.Logger
 import play.api.db.slick.{DatabaseConfigProvider, HasDatabaseConfigProvider}
 import slick.jdbc.JdbcProfile
 import slick.jdbc.MySQLProfile.api._
@@ -34,7 +35,7 @@ case class Transaction(id: Option[Long] = None,
                        transactionType: TransactionType,
                        amount: Long,
                        transactionId: Option[String] = None,
-                       created: LocalDateTime = LocalDateTime.now())
+                       created: DateTime = DateTime.now())
 
 object TransactionsTable {
   implicit val transactionStatusResultMapper = MappedColumnType.base[TransactionStatus, String](
@@ -51,17 +52,17 @@ object TransactionsTable {
 class TransactionsTable(tag: Tag) extends Table[Transaction](tag, "transactions") {
   import TransactionsTable._
 
-  def id = column[Option[Long]]("id", O.PrimaryKey, O.AutoInc)
+  def id = column[Long]("id", O.PrimaryKey, O.AutoInc)
   def fromUserId = column[Option[Long]]("from_user_id")
   def toUserId = column[Option[Long]]("to_user_id")
   def status = column[TransactionStatus]("status")
   def transactionType = column[TransactionType]("transaction_type")
   def amount = column[Long]("amount")
   def transactionId = column[Option[String]]("transaction_id", O.Unique)
-  def created = column[LocalDateTime]("created")
+  def created = column[DateTime]("created")
 
   def * = (
-    id,
+    id.?,
     fromUserId,
     toUserId,
     status,
@@ -74,13 +75,34 @@ class TransactionsTable(tag: Tag) extends Table[Transaction](tag, "transactions"
 
 class TransactionsDAO @Inject()(protected val dbConfigProvider: DatabaseConfigProvider)
   extends HasDatabaseConfigProvider[JdbcProfile] {
+  import TransactionsTable._
   import profile.api._
+
+  val logger = Logger(getClass)
 
   val Transactions = TableQuery[TransactionsTable]
 
+  def sumUserBalance(user: User)(implicit ec: ExecutionContext): Future[Long] =
+    db.run(Transactions
+      .withFilter(tx => tx.fromUserId === user.id || tx.toUserId === user.id)
+      .withFilter(tx => tx.status.inSet(Seq(TransactionStatus.Confirmed, TransactionStatus.Pending)))
+      .map { tx =>
+        Case
+          // Credit, only include confirmed transactions
+          .If(tx.toUserId === user.id && tx.status === TransactionStatus.Confirmed)
+          .Then(tx.amount)
+          // Debit, also include pending transactions
+          .If(tx.fromUserId === user.id && (tx.status === TransactionStatus.Confirmed || tx.status === TransactionStatus.Pending))
+          .Then(tx.amount * -1L)
+          .Else(0L)
+      }
+      .sum
+      .getOrElse(0l)
+      .result)
+
   def insert(transaction: Transaction)(implicit ec: ExecutionContext): Future[Transaction] =
     db.run((Transactions returning Transactions.map(_.id)) += transaction)
-      .map(id => transaction.copy(id = id))
+      .map(id => transaction.copy(id = Some(id)))
 
   def update(transaction: Transaction)(implicit ec: ExecutionContext): Future[Transaction] =
     db.run(Transactions

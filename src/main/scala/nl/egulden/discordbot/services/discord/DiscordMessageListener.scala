@@ -2,11 +2,12 @@ package nl.egulden.discordbot.services.discord
 
 import javax.inject.{Inject, Singleton}
 import net.dv8tion.jda.api.JDA
-import net.dv8tion.jda.api.entities.Message
+import net.dv8tion.jda.api.entities.{ChannelType, Message}
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent
+import net.dv8tion.jda.api.events.message.priv.PrivateMessageReceivedEvent
 import net.dv8tion.jda.api.events.{GenericEvent, ReadyEvent}
 import net.dv8tion.jda.api.hooks.EventListener
-import nl.egulden.discordbot.services.discord.messagehandlers.{HelpMessageHandler, MiningMessageHandler, TickerMessageHandler}
+import nl.egulden.discordbot.services.discord.messagehandlers.{HelpMessageHandler, MiningMessageHandler, TickerMessageHandler, TipMessageHandler}
 import play.api.Logger
 import play.api.inject.ApplicationLifecycle
 
@@ -17,7 +18,8 @@ class DiscordMessageListener @Inject()(val jda: JDA,
                                        val lifecycle: ApplicationLifecycle,
                                        helpMessageHandler: HelpMessageHandler,
                                        miningMessageHandler: MiningMessageHandler,
-                                       tickerMessageHandler: TickerMessageHandler)
+                                       tickerMessageHandler: TickerMessageHandler,
+                                       tipMessageHandler: TipMessageHandler)
                                       (implicit val ec: ExecutionContext)
   extends EventListener {
 
@@ -26,7 +28,8 @@ class DiscordMessageListener @Inject()(val jda: JDA,
   private val handlers = Seq(
     helpMessageHandler,
     miningMessageHandler,
-    tickerMessageHandler
+    tickerMessageHandler,
+    tipMessageHandler
   )
 
   startup()
@@ -50,8 +53,20 @@ class DiscordMessageListener @Inject()(val jda: JDA,
         logger.debug(s"Received message ${e.getMessage.getContentDisplay}")
 
         if (e.getMessage.getContentDisplay.startsWith("!") &&
+          // TODO: Create blacklist / whitelist channels
           e.getMessage.getChannel.getId == "625649671959740417") {
           this.handleBotMessage(e.getMessage)
+        }
+
+      case e: PrivateMessageReceivedEvent if (e.getAuthor != jda.getSelfUser)  =>
+        logger.debug(s"Received private message: ${e.getMessage.getContentDisplay}")
+
+        this.handleBotMessage(e.getMessage) match {
+          case false =>
+            e.getChannel.sendMessage(CommandParser.usage()).queue()
+
+          case _ =>
+            // Do nothing
         }
 
       case _ =>
@@ -59,10 +74,10 @@ class DiscordMessageListener @Inject()(val jda: JDA,
     }
   }
 
-  def handleBotMessage(message: Message): Any = {
+  def handleBotMessage(message: Message): Boolean = {
     CommandParser.parse(message.getContentDisplay) match {
       case Left(config) =>
-        val botMessage = BotMessage(message, config)
+        val botMessage = BotMessage(message, config.copy(isPrivateMessage = message.isFromType(ChannelType.PRIVATE)))
 
         logger.debug(s"Handling message of type ${botMessage.config.command}")
 
@@ -74,9 +89,16 @@ class DiscordMessageListener @Inject()(val jda: JDA,
           logger.debug(s"No handler found for message of type ${botMessage.config.command}")
         }
 
-      case Right(byteArray) =>
-        logger.debug(s"Failed to parse message:\n\n${byteArray}")
+        handled.nonEmpty
 
+      case Right(byteArray) =>
+        if (message.getContentDisplay.startsWith("!")) {
+          message.getChannel.sendMessage(byteArray.toString)
+        }
+
+        logger.debug(s"Failed to parse message:\n ${byteArray.toString}")
+
+        false
     }
   }
 }

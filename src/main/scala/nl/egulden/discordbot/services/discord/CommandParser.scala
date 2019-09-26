@@ -2,15 +2,15 @@ package nl.egulden.discordbot.services.discord
 
 import java.io.ByteArrayOutputStream
 
-import nl.egulden.discordbot.GlobalSettings
-import scopt.{OParser, RenderingMode}
 import nl.egulden.discordbot.services.discord.Command.Command
 import nl.egulden.discordbot.services.discord.SubCommand.SubCommand
+import scopt.{OParser, RenderingMode}
 
 case class CommandConfig(command: Command = Command.Help,
                          subCommand: Option[SubCommand] = None,
                          name: Option[String] = None,
-                         amount: Option[Double] = None)
+                         amount: Option[Double] = None,
+                         isPrivateMessage: Boolean = false)
 
 object Command extends Enumeration {
   type Command = Value
@@ -24,8 +24,8 @@ object Command extends Enumeration {
 object SubCommand extends Enumeration {
   type SubCommand = Value
 
-  val Address = Value("address")
-  val Balance = Value("balance")
+  val Address = Value("adres")
+  val Balance = Value("balans")
 }
 
 object CommandParser {
@@ -37,7 +37,7 @@ object CommandParser {
     OParser.sequence(
       head(
         """
-          |Welkom bij de EFL bot! Je kunt deze bot gebruiken om een aantal statistieken te bekijken.
+          |Welkom bij de EFL bot! Je kunt deze bot gebruiken om een aantal statistieken te bekijken en om andere gebruikers te 'tippen' als je vind dat ze dat verdienen
           |""".stripMargin
       ),
       cmd(s"${Command.Help}")
@@ -56,18 +56,10 @@ object CommandParser {
           arg[String]("<@Gebruiker>")
             .text("De gebruiker die je wilt tippen")
             .optional()
-            .validate(s => {
-              if (s.startsWith("@")) success
-              else failure("Moet beginnen met een @")
-            })
             .action((s, c) => c.copy(name = Some(s))),
           arg[Double]("<aantal>")
             .text("Aantal EFL dat je wilt geven")
             .optional()
-            .validate(d => {
-              if (d > GlobalSettings.MIN_TIP_AMOUNT) success
-              else failure (s"<aantal> moet groter zijn dan ${GlobalSettings.MIN_TIP_AMOUNT}")
-            })
             .action((a, c) => c.copy(amount = Some(a))),
           cmd(s"${SubCommand.Address}")
             .text("Vraag je adres op")
@@ -75,15 +67,7 @@ object CommandParser {
           cmd(s"${SubCommand.Balance}")
             .text("Vraag je balans op")
             .action((_, c) => c.copy(subCommand = Some(SubCommand.Balance))),
-        ),
-      checkConfig(c => {
-        if (c.command == Command.Tip &&
-          c.subCommand.isEmpty &&
-          (c.amount.isEmpty || c.name.isEmpty))
-          failure("<@Gebruiker> en <aantal> mogen niet ontbreken!")
-        else
-          success
-      }),
+        )
     )
   }
 

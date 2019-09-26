@@ -22,7 +22,7 @@ CREATE TABLE IF NOT EXISTS transactions (
                             'withdrawal',
                             'tip'
                         )                   NOT NULL
-    , amount            BIGINT UNSIGNED     NOT NULL
+    , amount            BIGINT              NOT NULL
     , transaction_id    VARCHAR(128)                    DEFAULT NULL
     , created           DATETIME            NOT NULL    DEFAULT CURRENT_TIMESTAMP
 

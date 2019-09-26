@@ -12,4 +12,5 @@ trait TipBotMessageHandler {
 
   final def handles(msg: BotMessage): Boolean =
     handlesTypes.contains(msg.config.command)
+
 }

@@ -4,8 +4,7 @@ import java.util
 import java.util.concurrent.{ExecutorService, ScheduledExecutorService}
 
 import com.google.inject.AbstractModule
-import com.google.inject.util.Providers
-import net.dv8tion.jda.api.entities.{ApplicationInfo, Category, Emote, Guild, PrivateChannel, Role, SelfUser, StoreChannel, TextChannel, User, VoiceChannel, Webhook}
+import net.dv8tion.jda.api.entities._
 import net.dv8tion.jda.api.hooks.IEventManager
 import net.dv8tion.jda.api.managers.{AudioManager, DirectAudioController, Presence}
 import net.dv8tion.jda.api.requests.RestAction
