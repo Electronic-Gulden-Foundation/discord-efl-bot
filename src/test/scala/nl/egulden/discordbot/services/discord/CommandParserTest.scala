@@ -5,6 +5,10 @@ import org.scalatestplus.play.PlaySpec
 class CommandParserTest extends PlaySpec {
 
   "CommandParser" should {
+    "usage should work" in {
+      CommandParser.usage() must not be empty
+    }
+
     "fail on an invalid command" in {
       CommandParser.parse("commandthatdoesnotexist") match {
         case Left(e) => fail("commandthatdoesnotexist must not be a valid command")
@@ -43,36 +47,8 @@ class CommandParserTest extends PlaySpec {
       }
     }
 
-    "fail to parse a tip command with missing username" in {
-      CommandParser.parse("!tip") match {
-        case Left(config) => fail("Must fail to parse")
-        case _ => succeed
-      }
-    }
-
-    "fail to parse a tip command with missing amount" in {
-      CommandParser.parse("!tip @username") match {
-        case Left(config) => fail("Must fail to parse")
-        case _ => succeed
-      }
-    }
-
-    "fail to parse a tip command with too low an amount" in {
-      CommandParser.parse("!tip @username 0.000001") match {
-        case Left(config) => fail("Must fail to parse")
-        case _ => succeed
-      }
-    }
-
-    "fail to parse a tip command that does not reference a member" in {
-      CommandParser.parse("!tip username") match {
-        case Left(config) => fail("Must fail to parse")
-        case _ => succeed
-      }
-    }
-
     "parse tip address command properly" in {
-      CommandParser.parse("!tip address") match {
+      CommandParser.parse("!tip adres") match {
         case Left(config) =>
           config.command mustBe Command.Tip
           config.subCommand mustBe Some(SubCommand.Address)
@@ -82,7 +58,7 @@ class CommandParserTest extends PlaySpec {
     }
 
     "parse balance command properly" in {
-      CommandParser.parse("!tip balance") match {
+      CommandParser.parse("!tip balans") match {
         case Left(config) =>
           config.command mustBe Command.Tip
           config.subCommand mustBe Some(SubCommand.Balance)

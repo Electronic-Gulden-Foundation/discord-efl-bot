@@ -1,13 +1,20 @@
-name := """discord-tip-bot"""
+name := """discord-efl-bot"""
 organization := "nl.egulden"
 
 version := "1.0-SNAPSHOT"
 
 lazy val root = (project in file("."))
-  .enablePlugins(PlayScala)
+  .enablePlugins(
+    PlayScala,
+    DockerPlugin
+  )
   .disablePlugins(PlayLayoutPlugin)
 
 scalaVersion := "2.13.1"
+
+dockerRepository := Some("registry.gitlab.com/electronic-gulden-foundation/discord-efl-bot")
+dockerBaseImage := "openjdk:11-jre"
+dockerExposedPorts := Seq(9000)
 
 libraryDependencies ++= Seq(
   guice,
@@ -22,12 +29,15 @@ libraryDependencies ++= Seq(
   // Discord
   "net.dv8tion" % "JDA" % "4.0.0_46",
 
-  // Utilities
+  // Bitcoin JSON Client
+  "wf.bitcoin" % "bitcoin-rpc-client" % "1.1.1",
+
+  // CLI options parsing
   "com.github.scopt" %% "scopt" % "4.0.0-RC2",
 
   // Test dependencies
   "org.scalatestplus.play" %% "scalatestplus-play" % "4.0.3" % Test,
-  "org.scalamock"          %% "scalamock"          % "4.4.0" % Test
+  "org.scalamock" %% "scalamock" % "4.4.0" % Test
 )
 
 resolvers += Resolver.JCenterRepository

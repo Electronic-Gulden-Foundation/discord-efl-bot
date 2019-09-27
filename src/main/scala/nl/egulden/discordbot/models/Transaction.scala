@@ -97,7 +97,7 @@ class TransactionsDAO @Inject()(protected val dbConfigProvider: DatabaseConfigPr
           .Else(0L)
       }
       .sum
-      .getOrElse(0l)
+      .getOrElse(0L)
       .result)
 
   def insert(transaction: Transaction)(implicit ec: ExecutionContext): Future[Transaction] =

@@ -1,0 +1,9 @@
+version: '3.0'
+
+services:
+  egulden:
+    image: registry.gitlab.com/electronic-gulden-foundation/eguldend-docker:latest
+    ports:
+      - 11015:11015
+    volumes:
+      - ./.data/egulden:/egulden

@@ -1,6 +1,7 @@
 package nl.egulden.discordbot.controllers
 
 import javax.inject._
+import play.api.Logger
 import play.api.mvc._
 
 import scala.concurrent.ExecutionContext
@@ -13,6 +14,8 @@ import scala.concurrent.ExecutionContext
 class HomeController @Inject()(cc: ControllerComponents)
                               (implicit ec: ExecutionContext)
   extends AbstractController(cc) {
+
+  val logger = Logger(getClass)
 
   /**
    * Create an Action to render an HTML page.
