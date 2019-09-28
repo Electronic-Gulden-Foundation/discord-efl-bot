@@ -3,6 +3,7 @@ package nl.egulden.discordbot.services.discord.messagehandlers
 import javax.inject.Inject
 import nl.egulden.discordbot.GlobalSettings
 import nl.egulden.discordbot.models.User
+import nl.egulden.discordbot.services.bitcoinrpc.WalletAddressService
 import nl.egulden.discordbot.services.discord.Command.Command
 import nl.egulden.discordbot.services.discord.{BotMessage, Command, DiscordMessageSending, SubCommand}
 import nl.egulden.discordbot.services.models.UsersService
@@ -13,7 +14,8 @@ import scala.concurrent.ExecutionContext
 
 class TipMessageHandler @Inject()(usersService: UsersService,
                                   tippingService: TippingService,
-                                  tipWalletService: TipWalletService)
+                                  tipWalletService: TipWalletService,
+                                  walletAddressService: WalletAddressService)
                                  (implicit val ec: ExecutionContext)
   extends TipBotMessageHandler
     with DiscordMessageSending {
@@ -39,12 +41,22 @@ class TipMessageHandler @Inject()(usersService: UsersService,
         }
   }
 
-  def handleAddressSubCommand(author: User, msg: BotMessage): Unit =
-    this.pmToAuthor(msg.message, "Nog niet geimplementeerd :(")
+  def handleAddressSubCommand(author: User, msg: BotMessage): Unit = {
+    walletAddressService.getOrCreateAddressFor(author)
+      .map { address =>
+        this.pmToAuthor(msg.message, s"Je adres is ${address.address}. Let op dat deze op elk moment kan wijzigen!")
+      }
+  }
 
   def handleBalanceSubCommand(author: User, msg: BotMessage): Unit = {
-    tipWalletService.getBalance(author).map { balance =>
-      this.pmToAuthor(msg.message, s"Je huidige balans is ${balance.satoshis} EFL")
+    tipWalletService.getBalance(author).map {
+      case balance if balance == 0 =>
+        this.pmToAuthor(msg.message, s"Je hebt helemaal geen EFL bij mij staan :(")
+
+        handleAddressSubCommand(author, msg)
+
+      case balance =>
+        this.pmToAuthor(msg.message, s"Je huidige balans is ${balance.satoshis} EFL")
     }
   }
 

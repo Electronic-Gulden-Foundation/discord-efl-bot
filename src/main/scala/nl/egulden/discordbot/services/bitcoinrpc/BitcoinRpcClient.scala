@@ -40,7 +40,7 @@ class BitcoinRpcClient(host: String,
   }
 
 
-  def listSinceBlock(maybeBlockhash: Option[String])
+  def listSinceBlock(maybeBlockhash: Option[String] = None)
                     (implicit ec: ExecutionContext): Future[TransactionsSinceBlock] = Future {
     blocking {
       maybeBlockhash match {

@@ -7,8 +7,10 @@ import nl.egulden.discordbot.models.TransactionType.TransactionType
 import org.joda.time.DateTime
 import play.api.Logger
 import play.api.db.slick.{DatabaseConfigProvider, HasDatabaseConfigProvider}
+import slick.ast.ColumnOption.Unique
 import slick.jdbc.JdbcProfile
 import slick.jdbc.MySQLProfile.api._
+import slick.lifted.Index
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -35,6 +37,7 @@ case class Transaction(id: Option[Long] = None,
                        transactionType: TransactionType,
                        amount: Long,
                        transactionId: Option[String] = None,
+                       vout: Option[Int] = None,
                        created: DateTime = DateTime.now())
 
 object TransactionsTable {
@@ -58,7 +61,8 @@ class TransactionsTable(tag: Tag) extends Table[Transaction](tag, "transactions"
   def status = column[TransactionStatus]("status")
   def transactionType = column[TransactionType]("transaction_type")
   def amount = column[Long]("amount")
-  def transactionId = column[Option[String]]("transaction_id", O.Unique)
+  def transactionId = column[Option[String]]("transaction_id")
+  def vout = column[Option[Int]]("vout")
   def created = column[DateTime]("created")
 
   def * = (
@@ -69,18 +73,30 @@ class TransactionsTable(tag: Tag) extends Table[Transaction](tag, "transactions"
     transactionType,
     amount,
     transactionId,
+    vout,
     created
   ) <> (Transaction.tupled, Transaction.unapply)
 }
 
 class TransactionsDAO @Inject()(protected val dbConfigProvider: DatabaseConfigProvider)
   extends HasDatabaseConfigProvider[JdbcProfile] {
+
   import TransactionsTable._
   import profile.api._
 
   val logger = Logger(getClass)
 
   val Transactions = TableQuery[TransactionsTable]
+
+  def findByTransactionId(txid: String): Future[Seq[Transaction]] =
+    db.run(Transactions.withFilter(_.transactionId === txid).result)
+
+  def findByTransactionIdAndVout(txid: String, vout: Int): Future[Option[Transaction]] =
+    db.run(Transactions
+      .withFilter(_.transactionId === txid)
+      .withFilter(_.vout === vout)
+      .result
+      .headOption)
 
   def sumUserBalance(user: User)(implicit ec: ExecutionContext): Future[Long] =
     db.run(Transactions

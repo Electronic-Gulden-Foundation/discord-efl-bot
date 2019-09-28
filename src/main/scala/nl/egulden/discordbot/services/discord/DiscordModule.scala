@@ -23,6 +23,7 @@ class DiscordModule(environment: Environment,
     environment.mode match {
       case mode if (mode == Mode.Dev || mode == Mode.Prod) =>
         bind(classOf[DiscordMessageListener]).asEagerSingleton()
+        bind(classOf[TransactionEventListener]).asEagerSingleton()
         bind(classOf[JDA]).toInstance(discordClient())
 
       case _ =>

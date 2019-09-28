@@ -29,7 +29,11 @@ class UsersTable(tag: Tag) extends Table[User](tag, "users") {
 class UsersDAO @Inject()(protected val dbConfigProvider: DatabaseConfigProvider)
   extends HasDatabaseConfigProvider[JdbcProfile] {
 
+
   private val Users = TableQuery[UsersTable]
+
+  def byId(id: Long): Future[Option[User]] =
+    db.run(Users.withFilter(_.id === id).result.headOption)
 
   def byDiscordUserId(discordUserId: Long): Future[Option[User]] =
     db.run(Users.withFilter(_.discordUserId === discordUserId).result.headOption)
