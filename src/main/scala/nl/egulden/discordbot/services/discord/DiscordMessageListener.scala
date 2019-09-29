@@ -13,6 +13,8 @@ import play.api.inject.ApplicationLifecycle
 
 import scala.concurrent.{ExecutionContext, Future}
 
+// TODO: Create blacklist / whitelist channels
+
 @Singleton
 class DiscordMessageListener @Inject()(val jda: JDA,
                                        val lifecycle: ApplicationLifecycle,
@@ -49,16 +51,14 @@ class DiscordMessageListener @Inject()(val jda: JDA,
       case e: ReadyEvent =>
         logger.debug(s"Connected to discord guilds: ${e.getGuildTotalCount}")
 
-      case e: MessageReceivedEvent if (e.getAuthor != jda.getSelfUser) =>
+      case e: MessageReceivedEvent if e.getAuthor != jda.getSelfUser =>
         logger.debug(s"Received message ${e.getMessage.getContentDisplay}")
 
-        if (e.getMessage.getContentDisplay.startsWith("!") &&
-          // TODO: Create blacklist / whitelist channels
-          e.getMessage.getChannel.getId == "625649671959740417") {
+        if (e.getMessage.getContentDisplay.startsWith("!")) {
           this.handleBotMessage(e.getMessage)
         }
 
-      case e: PrivateMessageReceivedEvent if (e.getAuthor != jda.getSelfUser)  =>
+      case e: PrivateMessageReceivedEvent if e.getAuthor != jda.getSelfUser  =>
         logger.debug(s"Received private message: ${e.getMessage.getContentDisplay}")
 
         this.handleBotMessage(e.getMessage) match {
