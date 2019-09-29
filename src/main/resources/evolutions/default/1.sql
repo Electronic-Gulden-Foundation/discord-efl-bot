@@ -1,4 +1,11 @@
 # --- !Ups
+CREATE TABLE IF NOT EXISTS settings (
+    `key`       VARCHAR(128)        NOT NULL
+    , `value`   VARCHAR(255)        NOT NULL
+
+    , PRIMARY KEY (`key`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
 CREATE TABLE IF NOT EXISTS users (
     id                  BIGINT UNSIGNED     NOT NULL    AUTO_INCREMENT
     , discord_user_id   BIGINT UNSIGNED     NOT NULL
@@ -57,3 +64,4 @@ CREATE TABLE IF NOT EXISTS transactions (
 DROP TABLE IF EXISTS transactions;
 DROP TABLE IF EXISTS wallet_addresses;
 DROP TABLE IF EXISTS users;
+DROP TABLE IF EXISTS settings;
