@@ -2,7 +2,7 @@ package nl.egulden.discordbot.services.discord
 
 import javax.inject.{Inject, Singleton}
 import net.dv8tion.jda.api.JDA
-import net.dv8tion.jda.api.entities.{ChannelType, Message}
+import net.dv8tion.jda.api.entities.{ChannelType, Message, MessageType}
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent
 import net.dv8tion.jda.api.events.message.priv.PrivateMessageReceivedEvent
 import net.dv8tion.jda.api.events.{GenericEvent, ReadyEvent}
@@ -51,7 +51,7 @@ class DiscordMessageListener @Inject()(val jda: JDA,
       case e: ReadyEvent =>
         logger.debug(s"Connected to discord guilds: ${e.getGuildTotalCount}")
 
-      case e: MessageReceivedEvent if e.getAuthor != jda.getSelfUser =>
+      case e: MessageReceivedEvent if e.getAuthor != jda.getSelfUser && e.getMessage.getChannelType != ChannelType.PRIVATE =>
         logger.debug(s"Received message ${e.getMessage.getContentDisplay}")
 
         if (e.getMessage.getContentDisplay.startsWith("!")) {

@@ -18,10 +18,6 @@ class BitcoinRpcModule(environment: Environment,
         configuration.get[Configuration](root).keys
           .filter(_.contains("."))
           .map(_.split("\\.")(0))
-          .filter { name =>
-            configuration.getOptional[Boolean](s"$root.$name.enabled")
-              .getOrElse(true)
-          }
           .foreach(bindRpcClient)
 
       case _ =>
