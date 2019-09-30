@@ -14,30 +14,30 @@ import scala.concurrent.{ExecutionContext, Future}
 @Singleton
 class TransactionEventListener @Inject()(actorSystem: ActorSystem,
                                          usersDAO: UsersDAO,
-                                         jda: JDA)
-                                        (implicit ec: ExecutionContext)
-    extends DiscordMessageSending {
+                                         jda: JDA,
+                                         discordMessageSender: DiscordMessageSender)
+                                        (implicit ec: ExecutionContext) {
 
   startup()
 
   def startup() = {
     actorSystem.actorOf(
-      TransactionEventListenerActor.props(usersDAO, jda),
+      TransactionEventListenerActor.props(usersDAO, jda, discordMessageSender),
       "transaction-event-listener"
     )
   }
 }
 
 object TransactionEventListenerActor {
-  def props(usersDAO: UsersDAO, jda: JDA)(implicit ec: ExecutionContext) =
-    Props(classOf[TransactionEventListenerActor], usersDAO, jda, ec)
+  def props(usersDAO: UsersDAO, jda: JDA, discordMessageSender: DiscordMessageSender)(implicit ec: ExecutionContext) =
+    Props(classOf[TransactionEventListenerActor], usersDAO, jda, discordMessageSender, ec)
 }
 
 class TransactionEventListenerActor(usersDAO: UsersDAO,
-                                    jda: JDA)
+                                    jda: JDA,
+                                    discordMessageSender: DiscordMessageSender)
                                    (implicit ec: ExecutionContext)
-  extends Actor
-    with DiscordMessageSending {
+  extends Actor {
 
   private val logger = Logger(getClass)
 
@@ -73,13 +73,13 @@ class TransactionEventListenerActor(usersDAO: UsersDAO,
                                      (implicit ec: ExecutionContext): Future[Unit] =
     this.getUserForTransaction(transaction)
       .map { case (user, discordUser) =>
-        this.pmToUser(discordUser, s"Ik heb een transactie van jou ontvangen! Je ontvangt straks ${transaction.amount.satoshi} EFL")
+        discordMessageSender.pmToUser(discordUser, s"Ik heb een transactie van jou ontvangen! Je ontvangt straks ${transaction.amount.satoshi} EFL")
       }
 
   def notifyUserOfTransactionConfirmed(transaction: Transaction): Future[Unit] =
     this.getUserForTransaction(transaction)
       .map { case (user, discordUser) =>
-        this.pmToUser(discordUser, s"Je transactie is bevestigd! Je hebt nu ${transaction.amount.satoshi} erbij!")
+        discordMessageSender.pmToUser(discordUser, s"Je transactie is bevestigd! Je hebt nu ${transaction.amount.satoshi} erbij!")
       }
 
   def getUserForTransaction(transaction: Transaction): Future[(User, DiscordUser)] =

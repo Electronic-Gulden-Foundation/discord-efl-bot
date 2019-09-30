@@ -1,5 +1,6 @@
 package nl.egulden.discordbot.services.discord
 
+import com.typesafe.config.ConfigList
 import javax.inject.{Inject, Singleton}
 import net.dv8tion.jda.api.JDA
 import net.dv8tion.jda.api.entities.{ChannelType, Message, MessageType}
@@ -7,11 +8,12 @@ import net.dv8tion.jda.api.events.message.MessageReceivedEvent
 import net.dv8tion.jda.api.events.message.priv.PrivateMessageReceivedEvent
 import net.dv8tion.jda.api.events.{GenericEvent, ReadyEvent}
 import net.dv8tion.jda.api.hooks.EventListener
-import nl.egulden.discordbot.services.discord.messagehandlers.{HelpMessageHandler, MiningMessageHandler, NoCommandMessageHandler, TickerMessageHandler, TipMessageHandler}
+import nl.egulden.discordbot.services.discord.messagehandlers.{CryptoWordFinderMessageHandler, HelpMessageHandler, MiningMessageHandler, TickerMessageHandler, TipMessageHandler}
 import play.api.{Configuration, Logger}
 import play.api.inject.ApplicationLifecycle
 
 import scala.concurrent.{ExecutionContext, Future}
+import scala.jdk.CollectionConverters._
 
 // TODO: Create blacklist / whitelist channels
 
@@ -22,7 +24,7 @@ class DiscordMessageListener @Inject()(val jda: JDA,
                                        miningMessageHandler: MiningMessageHandler,
                                        tickerMessageHandler: TickerMessageHandler,
                                        tipMessageHandler: TipMessageHandler,
-                                       noCommandMessageHandler: NoCommandMessageHandler,
+                                       cryptoWordFinderMessageHandler: CryptoWordFinderMessageHandler,
                                        configuration: Configuration)
                                       (implicit val ec: ExecutionContext)
   extends EventListener {
@@ -50,6 +52,17 @@ class DiscordMessageListener @Inject()(val jda: JDA,
 
   override def onEvent(event: GenericEvent): Unit = {
     event match {
+      case e: MessageReceivedEvent if shouldNotHandleMessageEvent(e) =>
+        // Do nothing
+
+      case e: MessageReceivedEvent =>
+        cryptoWordFinderMessageHandler.handleMessage(e.getMessage)
+
+      case _ =>
+        // Do nothing
+    }
+
+    event match {
       case e: ReadyEvent =>
         logger.debug(s"Connected to discord guilds: ${e.getGuildTotalCount}")
 
@@ -61,16 +74,12 @@ class DiscordMessageListener @Inject()(val jda: JDA,
 
         if (e.getMessage.getContentDisplay.startsWith("!")) {
           this.handleBotMessage(e.getMessage)
-        } else {
-          noCommandMessageHandler.handleMessage(e.getMessage)
         }
 
       case e: PrivateMessageReceivedEvent if e.getAuthor != jda.getSelfUser  =>
         logger.debug(s"Received private message: ${e.getMessage.getContentDisplay}")
 
-        if (!this.handleBotMessage(e.getMessage)) {
-          e.getChannel.sendMessage(CommandParser.usage()).queue()
-        }
+        this.handleBotMessage(e.getMessage)
 
       case _ =>
         logger.debug(s"Unmatched event of type ${event.getClass}")
@@ -106,10 +115,8 @@ class DiscordMessageListener @Inject()(val jda: JDA,
   }
 
   def shouldNotHandleMessageEvent(event: MessageReceivedEvent): Boolean = {
-    val maybeWhitelistChannelId = configuration.getOptional[Long]("discord.whitelistChannelId")
+    val whitelistChannelId = configuration.get[Long]("discord.whitelistChannelId")
 
-    logger.debug(s"$maybeWhitelistChannelId ${event.getMessage.getChannel.getIdLong}")
-
-    !maybeWhitelistChannelId.contains(event.getMessage.getChannel.getIdLong)
+    whitelistChannelId != -1L && whitelistChannelId != event.getMessage.getChannel.getIdLong
   }
 }

@@ -3,11 +3,14 @@ package nl.egulden.discordbot.services.bitcoinrpc
 import javax.inject.{Inject, Named}
 import nl.egulden.discordbot.models.{User, WalletAddress, WalletAddressConfig, WalletAddressesDAO}
 import org.joda.time.DateTime
+import play.api.Logger
 
 import scala.concurrent.{ExecutionContext, Future}
 
 class WalletAddressService @Inject()(walletAddressesDAO: WalletAddressesDAO,
                                      @Named("egulden") eguldenRpcClient: BitcoinRpcClient) {
+
+  val logger = Logger(getClass)
 
   def getOrCreateAddressFor(user: User)
                            (implicit ec: ExecutionContext): Future[WalletAddress] =
@@ -15,8 +18,13 @@ class WalletAddressService @Inject()(walletAddressesDAO: WalletAddressesDAO,
       maybeExisting <- walletAddressesDAO.getExistingForUser(user.id.get)
 
       newOrExisting <- maybeExisting match {
-        case Some(address) => Future(address)
-        case None => findUnusedOrCreateNewAddress(user)
+        case Some(address) =>
+          logger.debug(s"Found existing address for user #${user.id}")
+          Future(address)
+
+        case None =>
+          logger.debug(s"Creating or finding new address for user #${user.id}")
+          findUnusedOrCreateNewAddress(user)
       }
 
       updatedWithUsage <- updateAddressUsage(newOrExisting, user)

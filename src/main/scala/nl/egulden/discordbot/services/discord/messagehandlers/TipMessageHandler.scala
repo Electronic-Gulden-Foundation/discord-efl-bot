@@ -5,7 +5,7 @@ import nl.egulden.discordbot.GlobalSettings
 import nl.egulden.discordbot.models.User
 import nl.egulden.discordbot.services.bitcoinrpc.WalletAddressService
 import nl.egulden.discordbot.services.discord.Command.Command
-import nl.egulden.discordbot.services.discord.{BotMessage, Command, DiscordMessageSending, SubCommand}
+import nl.egulden.discordbot.services.discord.{BotMessage, Command, DiscordMessageSender, SubCommand}
 import nl.egulden.discordbot.services.models.UsersService
 import nl.egulden.discordbot.services.tipping.{TipWalletService, TippingError, TippingService}
 import nl.egulden.discordbot.utils.bitcoin.SatoshiBigDecimal._
@@ -15,10 +15,10 @@ import scala.concurrent.ExecutionContext
 class TipMessageHandler @Inject()(usersService: UsersService,
                                   tippingService: TippingService,
                                   tipWalletService: TipWalletService,
-                                  walletAddressService: WalletAddressService)
+                                  walletAddressService: WalletAddressService,
+                                  discordMessageSender: DiscordMessageSender)
                                  (implicit val ec: ExecutionContext)
-  extends TipBotMessageHandler
-    with DiscordMessageSending {
+  extends TipBotMessageHandler {
 
   override def handlesTypes: Seq[Command] = Seq(Command.Tip)
 
@@ -44,19 +44,23 @@ class TipMessageHandler @Inject()(usersService: UsersService,
   def handleAddressSubCommand(author: User, msg: BotMessage): Unit = {
     walletAddressService.getOrCreateAddressFor(author)
       .map { address =>
-        this.pmToAuthor(msg.message, s"Je adres is ${address.address}. Let op dat deze op elk moment kan wijzigen!")
+        val addressStr = address.address
+
+        discordMessageSender.pmToAuthor(msg.message, s"Je adres is $addressStr. Let op dat deze op elk moment kan wijzigen!")
+
+        logger.debug(s"Sent QR code for address ${addressStr}")
+        discordMessageSender.sendAddressQrCode(msg.message.getChannel, addressStr)
       }
   }
 
   def handleBalanceSubCommand(author: User, msg: BotMessage): Unit = {
     tipWalletService.getBalance(author).map {
       case balance if balance == 0 =>
-        this.pmToAuthor(msg.message, s"Je hebt helemaal geen EFL bij mij staan :(")
-
+        discordMessageSender.pmToAuthor(msg.message, s"Je hebt helemaal geen EFL bij mij staan :slight_frown:")
         handleAddressSubCommand(author, msg)
 
       case balance =>
-        this.pmToAuthor(msg.message, s"Je huidige balans is ${balance.satoshis} EFL")
+        discordMessageSender.pmToAuthor(msg.message, s"Je huidige balans is ${balance.satoshis} EFL")
     }
   }
 
@@ -64,18 +68,18 @@ class TipMessageHandler @Inject()(usersService: UsersService,
     val mentioned = msg.message.getMentionedUsers
 
     if (mentioned.isEmpty) {
-      this.replyToMessage(msg.message, "geen @mention gevonden in je bericht :(")
+      discordMessageSender.replyToMessage(msg.message, "geen @mention gevonden in je bericht :(")
     } else if (msg.config.amount.isEmpty || msg.config.amount.exists(_ < GlobalSettings.MIN_TIP_AMOUNT)) {
-      this.replyToMessage(msg.message, s"je moet minimaal ${GlobalSettings.MIN_TIP_AMOUNT} EFL tippen")
+      discordMessageSender.replyToMessage(msg.message, s"je moet minimaal ${GlobalSettings.MIN_TIP_AMOUNT} EFL tippen")
     } else if (mentioned.size() > 1) {
-      this.replyToMessage(msg.message, "teveel @mentions gevonden in je bericht, probeer het nog eens met maar 1 mention")
+      discordMessageSender.replyToMessage(msg.message, "teveel @mentions gevonden in je bericht, probeer het nog eens met maar 1 mention")
     } else {
       val tippedDiscordUser = mentioned.get(0)
 
       if (msg.message.getAuthor == tippedDiscordUser) {
-        this.replyToMessage(msg.message, "je bent natuurlijk geweldig, maar je kunt jezelf geen tip geven")
+        discordMessageSender.replyToMessage(msg.message, "je bent natuurlijk geweldig, maar je kunt jezelf geen tip geven")
       } else if (tippedDiscordUser == msg.message.getJDA.getSelfUser) {
-        this.replyToMessage(msg.message, "helaas mag ik geen tips ontvangen van mijn maker :(")
+        discordMessageSender.replyToMessage(msg.message, "helaas mag ik geen tips ontvangen van mijn maker :(")
       } else {
         for {
           tippedUser <- usersService.findOrCreateUserByDiscordId(tippedDiscordUser.getIdLong)
@@ -83,11 +87,11 @@ class TipMessageHandler @Inject()(usersService: UsersService,
         } yield {
           transactionOrError match {
             case Left(transaction) =>
-              replyToMessage(msg.message, s"Je hebt ${tippedDiscordUser.getAsMention} ${msg.config.amount.get} EFL getipt!")
-              pmToUser(tippedDiscordUser, s"Je hebt ${msg.config.amount.get} EFL gekregen van ${msg.message.getAuthor.getAsMention}")
+              discordMessageSender.replyToMessage(msg.message, s"Je hebt ${tippedDiscordUser.getAsMention} ${msg.config.amount.get} EFL getipt!")
+              discordMessageSender.pmToUser(tippedDiscordUser, s"Je hebt ${msg.config.amount.get} EFL gekregen van ${msg.message.getAuthor.getAsMention}")
 
             case Right(error) if (error == TippingError.NotEnoughBalance) =>
-              replyToMessage(msg.message, "Je hebt niet genoeg balans :(")
+              discordMessageSender.replyToMessage(msg.message, "Je hebt niet genoeg balans :(")
           }
         }
       }
