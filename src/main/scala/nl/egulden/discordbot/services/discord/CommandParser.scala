@@ -4,6 +4,7 @@ import java.io.ByteArrayOutputStream
 
 import nl.egulden.discordbot.services.discord.Command.Command
 import nl.egulden.discordbot.services.discord.SubCommand.SubCommand
+import play.api.Logger
 import scopt.{OParser, RenderingMode}
 
 case class CommandConfig(command: Command = Command.Help,
@@ -29,6 +30,7 @@ object SubCommand extends Enumeration {
 }
 
 object CommandParser {
+  private val logger = Logger(getClass)
 
   def parser(): OParser[Unit, CommandConfig] = {
     val builder = OParser.builder[CommandConfig]
@@ -81,12 +83,24 @@ object CommandParser {
       "\n\nhttps://gitlab.com/electronic-gulden-foundation/discord-efl-bot/"
 
   def parse(arguments: String): Either[CommandConfig, String] = {
-    parse(
-      arguments
-        .split(" ")
-        .map(_.trim)
-        .filter(_.nonEmpty)
-    )
+    val split = arguments
+      .split(" ")
+      .map(_.trim)
+      .filter(_.nonEmpty)
+
+    val args: Array[String] = split match {
+      // Recombine mention into one argument
+      case args if args.headOption.contains("!tip") &&
+        args.tail.headOption.exists(_.startsWith("@")) =>
+        val mention = args.tail.filter(_.toDoubleOption.isEmpty).mkString(" ")
+        val amount = args.last
+
+        Array(args.head, mention, amount)
+
+      case args => args
+    }
+
+    parse(args)
   }
 
   def parse(arguments: Array[String]): Either[CommandConfig, String] = {

@@ -66,5 +66,16 @@ class CommandParserTest extends PlaySpec {
         case Right(byteArray) => fail(s"Must not fail to parse \n\n ${byteArray}")
       }
     }
+
+    "handle @mention with spaces in the name properly" in {
+      CommandParser.parse("!tip @test user with a lot of spaces in the name 33") match {
+        case Left(config) =>
+          config.command mustBe Command.Tip
+          config.name mustBe Some("@test user with a lot of spaces in the name")
+
+        case Right(byteArray) =>
+          fail(s"Must not fail to parse: \n\n ${byteArray}")
+      }
+    }
   }
 }
