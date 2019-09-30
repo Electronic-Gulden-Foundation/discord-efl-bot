@@ -5,10 +5,12 @@ version := "1.0-SNAPSHOT"
 
 lazy val root = (project in file("."))
   .enablePlugins(
+    DockerPlugin,
     PlayScala,
-    DockerPlugin
   )
-  .disablePlugins(PlayLayoutPlugin)
+  .disablePlugins(
+    PlayLayoutPlugin,
+  )
 
 scalaVersion := "2.13.1"
 
@@ -35,12 +37,16 @@ libraryDependencies ++= Seq(
   // CLI options parsing
   "com.github.scopt" %% "scopt" % "4.0.0-RC2",
 
-  // Test dependencies
+  // QR Codes
+  "com.github.kenglxn.QRGen" % "javase" % "2.6.0",
+
+// Test dependencies
   "org.scalatestplus.play" %% "scalatestplus-play" % "4.0.3" % Test,
   "org.scalamock" %% "scalamock" % "4.4.0" % Test
 )
 
 resolvers += Resolver.JCenterRepository
+resolvers += "jitpack" at "https://jitpack.io"
 
 // Adds additional packages into Twirl
 //TwirlKeys.templateImports += "nl.egulden.controllers._"

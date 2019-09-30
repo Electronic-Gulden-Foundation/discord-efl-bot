@@ -1,6 +1,6 @@
 package nl.egulden.discordbot.services.discord
 
-import net.dv8tion.jda.api.entities.{Message, User => DiscordUser}
+import net.dv8tion.jda.api.entities.{Message, MessageEmbed, User => DiscordUser}
 
 trait DiscordMessageSending {
 

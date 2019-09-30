@@ -7,8 +7,8 @@ import net.dv8tion.jda.api.events.message.MessageReceivedEvent
 import net.dv8tion.jda.api.events.message.priv.PrivateMessageReceivedEvent
 import net.dv8tion.jda.api.events.{GenericEvent, ReadyEvent}
 import net.dv8tion.jda.api.hooks.EventListener
-import nl.egulden.discordbot.services.discord.messagehandlers.{HelpMessageHandler, MiningMessageHandler, TickerMessageHandler, TipMessageHandler}
-import play.api.Logger
+import nl.egulden.discordbot.services.discord.messagehandlers.{HelpMessageHandler, MiningMessageHandler, NoCommandMessageHandler, TickerMessageHandler, TipMessageHandler}
+import play.api.{Configuration, Logger}
 import play.api.inject.ApplicationLifecycle
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -21,7 +21,9 @@ class DiscordMessageListener @Inject()(val jda: JDA,
                                        helpMessageHandler: HelpMessageHandler,
                                        miningMessageHandler: MiningMessageHandler,
                                        tickerMessageHandler: TickerMessageHandler,
-                                       tipMessageHandler: TipMessageHandler)
+                                       tipMessageHandler: TipMessageHandler,
+                                       noCommandMessageHandler: NoCommandMessageHandler,
+                                       configuration: Configuration)
                                       (implicit val ec: ExecutionContext)
   extends EventListener {
 
@@ -51,22 +53,23 @@ class DiscordMessageListener @Inject()(val jda: JDA,
       case e: ReadyEvent =>
         logger.debug(s"Connected to discord guilds: ${e.getGuildTotalCount}")
 
+      case e: MessageReceivedEvent if shouldNotHandleMessageEvent(e) =>
+        logger.debug(s"Ignoring message")
+
       case e: MessageReceivedEvent if e.getAuthor != jda.getSelfUser && e.getMessage.getChannelType != ChannelType.PRIVATE =>
         logger.debug(s"Received message ${e.getMessage.getContentDisplay}")
 
         if (e.getMessage.getContentDisplay.startsWith("!")) {
           this.handleBotMessage(e.getMessage)
+        } else {
+          noCommandMessageHandler.handleMessage(e.getMessage)
         }
 
       case e: PrivateMessageReceivedEvent if e.getAuthor != jda.getSelfUser  =>
         logger.debug(s"Received private message: ${e.getMessage.getContentDisplay}")
 
-        this.handleBotMessage(e.getMessage) match {
-          case false =>
-            e.getChannel.sendMessage(CommandParser.usage()).queue()
-
-          case _ =>
-            // Do nothing
+        if (!this.handleBotMessage(e.getMessage)) {
+          e.getChannel.sendMessage(CommandParser.usage()).queue()
         }
 
       case _ =>
@@ -100,5 +103,13 @@ class DiscordMessageListener @Inject()(val jda: JDA,
 
         false
     }
+  }
+
+  def shouldNotHandleMessageEvent(event: MessageReceivedEvent): Boolean = {
+    val maybeWhitelistChannelId = configuration.getOptional[Long]("discord.whitelistChannelId")
+
+    logger.debug(s"$maybeWhitelistChannelId ${event.getMessage.getChannel.getIdLong}")
+
+    !maybeWhitelistChannelId.contains(event.getMessage.getChannel.getIdLong)
   }
 }
