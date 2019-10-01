@@ -2,7 +2,7 @@ package nl.egulden.discordbot.services.discord.messagehandlers
 
 import javax.inject.Inject
 import nl.egulden.discordbot.GlobalSettings
-import nl.egulden.discordbot.models.User
+import nl.egulden.discordbot.models.{User, WalletAddress}
 import nl.egulden.discordbot.services.bitcoinrpc.WalletAddressService
 import nl.egulden.discordbot.services.discord.Command.Command
 import nl.egulden.discordbot.services.discord.{BotMessage, Command, DiscordMessageSender, SubCommand}
@@ -11,6 +11,7 @@ import nl.egulden.discordbot.services.tipping.{TipWalletService, TippingError, T
 import nl.egulden.discordbot.utils.bitcoin.SatoshiBigDecimal._
 
 import scala.concurrent.ExecutionContext
+import scala.util.{Failure, Success}
 
 class TipMessageHandler @Inject()(usersService: UsersService,
                                   tippingService: TippingService,
@@ -42,18 +43,29 @@ class TipMessageHandler @Inject()(usersService: UsersService,
   }
 
   def handleAddressSubCommand(author: User, msg: BotMessage): Unit = {
-    walletAddressService.getOrCreateAddressFor(author)
-      .map { address =>
-        val addressStr = address.address
+    logger.debug("Handling address subcommand")
 
-        msg.message.getAuthor.openPrivateChannel().queue(channel => {
-          discordMessageSender.sendInChannel(channel, s"Je adres is $addressStr. Let op dat deze op elk moment kan wijzigen!")
-          discordMessageSender.sendAddressQrCode(channel, addressStr)
-        })
+    walletAddressService.getOrCreateAddressFor(author)
+      .onComplete {
+        case Success(address) =>
+          val addressStr = address.address
+          logger.debug(s"Found address ${addressStr}, opening private channel...")
+
+          msg.message.getAuthor.openPrivateChannel().queue(channel => {
+            logger.debug("Sending address information")
+
+            discordMessageSender.sendInChannel(channel, s"Je adres is $addressStr. Let op dat deze op elk moment kan wijzigen!")
+            discordMessageSender.sendAddressQrCode(channel, addressStr)
+          })
+
+        case Failure(e) =>
+          logger.error("Failed to get or create address", e)
       }
   }
 
   def handleBalanceSubCommand(author: User, msg: BotMessage): Unit = {
+    logger.debug("Handling balance subcommand")
+
     tipWalletService.getBalance(author).map {
       case balance if balance == 0 =>
         discordMessageSender.pmToAuthor(msg.message, s"Je hebt helemaal geen EFL bij mij staan :slight_frown:")
