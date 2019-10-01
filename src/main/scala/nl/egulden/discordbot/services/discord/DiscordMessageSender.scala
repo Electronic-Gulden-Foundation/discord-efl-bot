@@ -16,7 +16,10 @@ class DiscordMessageSender @Inject()(configuration: Configuration) {
   def transactionLinkTemplate: String = configuration.get[String]("app.linktemplates.transaction")
 
   def sendInChannel(msg: Message, text: String): Unit =
-    msg.getChannel.sendMessage(text).queue()
+    sendInChannel(msg.getChannel, text)
+
+  def sendInChannel(channel: MessageChannel, text: String): Unit =
+    channel.sendMessage(text).queue()
 
   def replyToMessage(msg: Message, reply: String): Unit =
     this.sendInChannel(msg, s"${msg.getAuthor.getAsMention} $reply")

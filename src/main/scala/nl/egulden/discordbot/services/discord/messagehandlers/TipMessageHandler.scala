@@ -46,10 +46,10 @@ class TipMessageHandler @Inject()(usersService: UsersService,
       .map { address =>
         val addressStr = address.address
 
-        discordMessageSender.pmToAuthor(msg.message, s"Je adres is $addressStr. Let op dat deze op elk moment kan wijzigen!")
-
-        logger.debug(s"Sent QR code for address ${addressStr}")
-        discordMessageSender.sendAddressQrCode(msg.message.getChannel, addressStr)
+        msg.message.getAuthor.openPrivateChannel().queue(channel => {
+          discordMessageSender.sendInChannel(channel, s"Je adres is $addressStr. Let op dat deze op elk moment kan wijzigen!")
+          discordMessageSender.sendAddressQrCode(channel, addressStr)
+        })
       }
   }
 
@@ -88,7 +88,6 @@ class TipMessageHandler @Inject()(usersService: UsersService,
           transactionOrError match {
             case Left(transaction) =>
               discordMessageSender.replyToMessage(msg.message, s"Je hebt ${tippedDiscordUser.getAsMention} ${msg.config.amount.get} EFL getipt!")
-              discordMessageSender.pmToUser(tippedDiscordUser, s"Je hebt ${msg.config.amount.get} EFL gekregen van ${msg.message.getAuthor.getAsMention}")
 
             case Right(error) if (error == TippingError.NotEnoughBalance) =>
               discordMessageSender.replyToMessage(msg.message, "Je hebt niet genoeg balans :(")
