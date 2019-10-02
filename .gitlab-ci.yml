@@ -14,10 +14,12 @@ before_script:
   - sbt sbt-version
 
 test:
+  stage: test
   script:
     - sbt clean test
 
 build:
+  stage: build
   services:
     - docker:dind
   script:
