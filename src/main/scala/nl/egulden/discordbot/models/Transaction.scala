@@ -38,6 +38,7 @@ case class Transaction(id: Option[Long] = None,
                        amount: Long,
                        transactionId: Option[String] = None,
                        vout: Option[Int] = None,
+                       withdrawalAddress: Option[String] = None,
                        created: DateTime = DateTime.now())
 
 object TransactionsTable {
@@ -63,6 +64,7 @@ class TransactionsTable(tag: Tag) extends Table[Transaction](tag, "transactions"
   def amount = column[Long]("amount")
   def transactionId = column[Option[String]]("transaction_id")
   def vout = column[Option[Int]]("vout")
+  def withdrawalAddress = column[Option[String]]("withdrawal_address")
   def created = column[DateTime]("created")
 
   def * = (
@@ -74,6 +76,7 @@ class TransactionsTable(tag: Tag) extends Table[Transaction](tag, "transactions"
     amount,
     transactionId,
     vout,
+    withdrawalAddress,
     created
   ) <> (Transaction.tupled, Transaction.unapply)
 }

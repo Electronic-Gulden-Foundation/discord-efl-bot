@@ -36,4 +36,22 @@ class TipWalletService @Inject()(transactionsDAO: TransactionsDAO,
                         (implicit ec: ExecutionContext): Future[WalletAddress] =
     walletAddressService.updateAddressUsage(walletAddress, currentUserId)
 
+  def withdraw(user: User, address: String, amount: Double)
+              (implicit ec: ExecutionContext): Future[Option[Transaction]] =
+    hasBalance(user, amount)
+    .flatMap {
+      case true =>
+        transactionsDAO
+          .insert(Transaction(
+            fromUserId = user.id,
+            status = TransactionStatus.Pending,
+            transactionType = TransactionType.Withdrawal,
+            amount = amount.toSatoshi,
+            withdrawalAddress = Some(address)
+          ))
+          .map(Some(_))
+
+      case false =>
+        Future(None)
+    }
 }

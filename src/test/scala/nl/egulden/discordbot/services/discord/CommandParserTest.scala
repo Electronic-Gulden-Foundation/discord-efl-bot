@@ -21,7 +21,6 @@ class CommandParserTest extends PlaySpec {
       CommandParser.parse("!help").left.toOption must not be empty
 
       CommandParser.parse("!help").left.get.command mustBe Command.Help
-      CommandParser.parse("!help").left.get.subCommand mustBe empty
     }
 
     "parse ticker command properly" in {
@@ -38,32 +37,30 @@ class CommandParserTest extends PlaySpec {
       CommandParser.parse("!tip @gebruiker 0.1") match {
         case Left(config) =>
           config.command mustBe Command.Tip
-          config.subCommand mustBe empty
+
           config.name mustBe Some("@gebruiker")
           config.amount mustBe Some(0.1d)
 
-        case _ =>
-          fail("Must not fail")
+        case Right(str) =>
+          fail(s"Must not fail to parse:\n\n$str")
       }
     }
 
     "parse tip address command properly" in {
       CommandParser.parse("!tip adres") match {
         case Left(config) =>
-          config.command mustBe Command.Tip
-          config.subCommand mustBe Some(SubCommand.Address)
+          config.command mustBe Command.TipAddress
 
-        case Right(byteArray) => fail(s"Must not fail to parse \n\n ${byteArray}")
+        case Right(str) => fail(s"Must not fail to parse \n\n ${str}")
       }
     }
 
     "parse balance command properly" in {
       CommandParser.parse("!tip balans") match {
         case Left(config) =>
-          config.command mustBe Command.Tip
-          config.subCommand mustBe Some(SubCommand.Balance)
+          config.command mustBe Command.TipBalance
 
-        case Right(byteArray) => fail(s"Must not fail to parse \n\n ${byteArray}")
+        case Right(str) => fail(s"Must not fail to parse \n\n ${str}")
       }
     }
 
@@ -71,10 +68,35 @@ class CommandParserTest extends PlaySpec {
       CommandParser.parse("!tip @test user with a lot of spaces in the name 33") match {
         case Left(config) =>
           config.command mustBe Command.Tip
-          config.name mustBe Some("@test user with a lot of spaces in the name")
+          config.name must contain("@test user with a lot of spaces in the name")
 
-        case Right(byteArray) =>
-          fail(s"Must not fail to parse: \n\n ${byteArray}")
+        case Right(str) =>
+          fail(s"Must not fail to parse: \n\n ${str}")
+      }
+    }
+
+    "parse withdraw command properly" in {
+      CommandParser.parse("!tip opnemen LczjPQp1xnCAvnXNmLQnHj4L6xZj8HLKYy 10") match {
+        case Left(config) =>
+          println(config)
+
+          config.command mustBe Command.TipWithdraw
+
+          config.address must contain("LczjPQp1xnCAvnXNmLQnHj4L6xZj8HLKYy")
+          config.amount must contain(10d)
+
+        case Right(str) =>
+          fail(s"Must not fail to parse:\n\n${str}")
+      }
+    }
+
+    "fail to arse withdraw command with invalid address" in {
+      CommandParser.parse("!tip opnemen wasdf 10") match {
+        case Left(config) =>
+          fail("Should fail to parse invalid address")
+
+        case Right(_) =>
+          succeed
       }
     }
   }
