@@ -40,7 +40,7 @@ libraryDependencies ++= Seq(
   // QR Codes
   "com.github.kenglxn.QRGen" % "javase" % "2.6.0",
 
-// Test dependencies
+  // Test dependencies
   "org.scalatestplus.play" %% "scalatestplus-play" % "4.0.3" % Test,
   "org.scalamock" %% "scalamock" % "4.4.0" % Test
 )

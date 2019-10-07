@@ -1,28 +1,22 @@
 package nl.egulden.discordbot.services.ticker
 
 import org.scalatestplus.play.PlaySpec
-import org.scalatestplus.play.guice.GuiceOneAppPerSuite
-import play.api.libs.ws.WSClient
-import play.api.test.Injecting
+import play.api.test.Helpers._
+import play.api.test.WsTestClient
 
-import scala.concurrent.duration.Duration
-import scala.concurrent.{Await, ExecutionContext}
+import scala.concurrent.ExecutionContext.Implicits.global
 
-class EflNlTickerTest
-  extends PlaySpec
-    with GuiceOneAppPerSuite
-    with Injecting {
-
-  val wsClient = inject[WSClient]
-  implicit val ec = inject[ExecutionContext]
+class EflNlTickerTest extends PlaySpec with WsTestClient {
 
   "EflNlTickerTest" should {
     "getTickerInfo" in {
-      val eflNlTicker = new EflNlTicker(wsClient)
+      withClient { wsClient =>
+        val eflNlTicker = new EflNlTicker(wsClient)
 
-      val result = Await.result(eflNlTicker.getTickerInfo(), Duration.Inf)
+        val result = await(eflNlTicker.getTickerInfo())
 
-      result.eur_market_cap >= 0d mustBe true
+        result.eur_market_cap >= 0d mustBe true
+      }
     }
   }
 }
