@@ -2,18 +2,24 @@ package nl.egulden.discordbot.services.discord
 
 import com.google.zxing.EncodeHintType
 import javax.inject.Inject
-import net.dv8tion.jda.api.EmbedBuilder
+import net.dv8tion.jda.api.{EmbedBuilder, JDA}
 import net.dv8tion.jda.api.entities.{Message, MessageChannel, User => DiscordUser}
 import net.glxn.qrgen.core.image.ImageType
 import net.glxn.qrgen.javase.QRCode
 import play.api.{Configuration, Logger}
 
-class DiscordMessageSender @Inject()(configuration: Configuration) {
+class DiscordMessageSender @Inject()(configuration: Configuration,
+                                     jda: JDA) {
 
   val logger = Logger(getClass)
 
   def addressLinkTemplate: String = configuration.get[String]("app.linktemplates.address")
+  def adminUserId: Long = configuration.get[Long]("discord.adminUserId")
   def transactionLinkTemplate: String = configuration.get[String]("app.linktemplates.transaction")
+
+  def getAdminUser: DiscordUser = jda.getUserById(adminUserId)
+
+  def sendToAdmin(text: String): Unit = pmToUser(getAdminUser, text)
 
   def sendInChannel(msg: Message, text: String): Unit =
     sendInChannel(msg.getChannel, text)

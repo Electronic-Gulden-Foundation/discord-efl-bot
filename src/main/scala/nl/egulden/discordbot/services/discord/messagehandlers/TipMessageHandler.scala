@@ -2,10 +2,10 @@ package nl.egulden.discordbot.services.discord.messagehandlers
 
 import javax.inject.Inject
 import nl.egulden.discordbot.GlobalSettings
-import nl.egulden.discordbot.models.{User, WalletAddress}
+import nl.egulden.discordbot.models.User
 import nl.egulden.discordbot.services.bitcoinrpc.WalletAddressService
 import nl.egulden.discordbot.services.discord.Command.Command
-import nl.egulden.discordbot.services.discord.{BotMessage, Command, DiscordMessageSender, SubCommand}
+import nl.egulden.discordbot.services.discord.{BotMessage, Command, DiscordMessageSender}
 import nl.egulden.discordbot.services.models.UsersService
 import nl.egulden.discordbot.services.tipping.{TipWalletService, TippingError, TippingService}
 import nl.egulden.discordbot.utils.bitcoin.SatoshiBigDecimal._
@@ -21,23 +21,27 @@ class TipMessageHandler @Inject()(usersService: UsersService,
                                  (implicit val ec: ExecutionContext)
   extends TipBotMessageHandler {
 
-  override def handlesTypes: Seq[Command] = Seq(Command.Tip)
+  // TODO: Split the various handlers off into separate classes
+  override def handlesTypes: Seq[Command] = Command.TipCommands
 
   override def handleMessage(msg: BotMessage): Unit = {
     usersService.findOrCreateUserByDiscordId(msg.message.getAuthor.getIdLong)
         .map { author =>
-          msg.config.subCommand match {
-            case Some(SubCommand.Address) =>
+          msg.config.command match {
+            case Command.TipAddress =>
               handleAddressSubCommand(author, msg)
 
-            case Some(SubCommand.Balance) =>
+            case Command.TipBalance =>
               handleBalanceSubCommand(author, msg)
 
-            case None =>
+            case Command.TipWithdraw =>
+              handleWithdrawSubCommand(author, msg)
+
+            case Command.Tip =>
               handleTip(author, msg)
 
-            case Some(subCommand) =>
-              logger.debug(s"Unmatched subcommand $subCommand")
+            case command =>
+              logger.debug(s"Unmatched command $command")
           }
         }
   }
@@ -91,7 +95,7 @@ class TipMessageHandler @Inject()(usersService: UsersService,
       if (msg.message.getAuthor == tippedDiscordUser) {
         discordMessageSender.replyToMessage(msg.message, "je bent natuurlijk geweldig, maar je kunt jezelf geen tip geven")
       } else if (tippedDiscordUser == msg.message.getJDA.getSelfUser) {
-        discordMessageSender.replyToMessage(msg.message, "helaas mag ik geen tips ontvangen van mijn maker :(")
+        discordMessageSender.replyToMessage(msg.message, "helaas mag ik geen tips ontvangen van mijn maker :frowning:")
       } else {
         for {
           tippedUser <- usersService.findOrCreateUserByDiscordId(tippedDiscordUser.getIdLong)
@@ -102,10 +106,28 @@ class TipMessageHandler @Inject()(usersService: UsersService,
               discordMessageSender.replyToMessage(msg.message, s"Je hebt ${tippedDiscordUser.getAsMention} ${msg.config.amount.get} EFL getipt!")
 
             case Right(error) if (error == TippingError.NotEnoughBalance) =>
-              discordMessageSender.replyToMessage(msg.message, "Je hebt niet genoeg balans :(")
+              discordMessageSender.replyToMessage(msg.message, "Je hebt niet genoeg balans :frowning:")
           }
         }
       }
     }
+  }
+
+  def handleWithdrawSubCommand(author: User, msg: BotMessage): Unit = {
+    tipWalletService.withdraw(author, msg.config.address.get, msg.config.amount.get)
+      .onComplete {
+        case Success(Some(transaction)) =>
+          discordMessageSender.pmToAuthor(msg.message, "Je transactie wordt binnenkort verzonden!")
+          discordMessageSender.sendToAdmin(s"Gebruiker ${msg.message.getAuthor.getName} heeft een withdrawal opgevraagd")
+
+        case Success(None) =>
+          tipWalletService.getBalance(author)
+            .map { balance =>
+              discordMessageSender.pmToAuthor(msg.message, s"Helaas je hebt niet genoeg balans :frowning: Je hebt nu $balance EFL")
+            }
+
+        case Failure(e) =>
+          logger.error("Withdraw subcommand failed", e)
+      }
   }
 }

@@ -1,16 +1,17 @@
 package nl.egulden.discordbot.services.discord
 
 import java.io.ByteArrayOutputStream
+import java.util.NoSuchElementException
 
+import nl.egulden.discordbot.GlobalSettings
 import nl.egulden.discordbot.services.discord.Command.Command
-import nl.egulden.discordbot.services.discord.SubCommand.SubCommand
 import play.api.Logger
 import scopt.{OParser, RenderingMode}
 
 case class CommandConfig(command: Command = Command.Help,
-                         subCommand: Option[SubCommand] = None,
                          name: Option[String] = None,
                          amount: Option[Double] = None,
+                         address: Option[String] = None,
                          isPrivateMessage: Boolean = false)
 
 object Command extends Enumeration {
@@ -20,13 +21,19 @@ object Command extends Enumeration {
   val Mining = Value("!mining")
   val Ticker = Value("!ticker")
   val Tip = Value("!tip")
-}
+  val TipAddress = Value("!tip adres")
+  val TipBalance = Value("!tip balans")
+  val TipWithdraw = Value("!tip opnemen")
 
-object SubCommand extends Enumeration {
-  type SubCommand = Value
+  val TipCommands = Seq(Tip, TipAddress, TipBalance, TipWithdraw)
 
-  val Address = Value("adres")
-  val Balance = Value("balans")
+  def maybeWithName(name: String): Option[Value] =
+    try {
+      Some(Command.withName(name))
+    } catch  {
+      case e: NoSuchElementException => None
+      case e => throw e
+    }
 }
 
 object CommandParser {
@@ -57,18 +64,29 @@ object CommandParser {
         .children(
           arg[String]("<@Gebruiker>")
             .text("De gebruiker die je wilt tippen")
-            .optional()
             .action((s, c) => c.copy(name = Some(s))),
           arg[Double]("<aantal>")
             .text("Aantal EFL dat je wilt geven")
-            .optional()
             .action((a, c) => c.copy(amount = Some(a))),
-          cmd(s"${SubCommand.Address}")
-            .text("Vraag je adres op")
-            .action((_, c) => c.copy(subCommand = Some(SubCommand.Address))),
-          cmd(s"${SubCommand.Balance}")
-            .text("Vraag je balans op")
-            .action((_, c) => c.copy(subCommand = Some(SubCommand.Balance))),
+        ),
+      cmd(s"${Command.TipAddress}")
+        .text("Vraag je adres op")
+        .action((_, c) => c.copy(command = Command.TipAddress)),
+      cmd(s"${Command.TipBalance}")
+        .text("Vraag je balans op")
+        .action((_, c) => c.copy(command = Command.TipBalance)),
+      cmd(s"${Command.TipWithdraw}")
+        .text("EFL opnemen")
+        .action((_, c) => c.copy(command = Command.TipWithdraw))
+        .children(
+          arg[String]("<adres>")
+            .text("Het adres waar je naar wilt overmaken")
+            .action((s, c) => c.copy(address = Some(s)))
+            .validate(s => if (s.matches("^[LM3][a-km-zA-HJ-NP-Z1-9]{26,33}$")) success else failure("Dit lijkt niet op een EFL adres")),
+          arg[Double]("<aantal>")
+            .text("Aantal EFL die je wilt overmaken")
+            .action((d, c) => c.copy(amount = Some(d)))
+            .validate(d => if (d >= GlobalSettings.MIN_WITHDRAW_AMOUNT) success else failure(s"Dit moet minimaal ${GlobalSettings.MIN_WITHDRAW_AMOUNT} zijn"))
         )
     )
   }
@@ -89,13 +107,21 @@ object CommandParser {
       .filter(_.nonEmpty)
 
     val args: Array[String] = split match {
-      // Recombine mention into one argument
-      case args if args.headOption.contains("!tip") &&
+      // Recombine a mention with several spaces into one argument
+      case args if args.length > 2 &&
+        args.headOption.contains("!tip") &&
         args.tail.headOption.exists(_.startsWith("@")) =>
         val mention = args.tail.filter(_.toDoubleOption.isEmpty).mkString(" ")
         val amount = args.last
 
         Array(args.head, mention, amount)
+
+      // The first 2 arguments may make up a single command with a space. ("!tip adres" or "!tip balans")
+      // Try to find a command from the first two arguments, if one exists the first two arguments are combined into one
+      // string
+      case args if args.length >= 2 &&
+        Command.maybeWithName(args.take(2).mkString(" ")).nonEmpty =>
+        Array(args.take(2).mkString(" ")) ++ args.tail.tail
 
       case args => args
     }
