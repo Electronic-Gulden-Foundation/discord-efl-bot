@@ -5,7 +5,7 @@ stages:
 
 before_script:
   - apt-get update -yqq
-  - apt-get install -yqq apt-transport-https ca-certificates curl gnupg2 software-properties-common lsb_release
+  - apt-get install -yqq apt-transport-https ca-certificates curl gnupg2 software-properties-common lsb-release
   - lsb_release -cs
   - echo "Adding SBT repository"
   - apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 2EE0EA64E40A89B84B2DF73499E82A75642AC823
