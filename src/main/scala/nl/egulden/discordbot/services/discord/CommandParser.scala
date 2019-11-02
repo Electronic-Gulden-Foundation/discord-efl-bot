@@ -32,7 +32,7 @@ object Command extends Enumeration {
       Some(Command.withName(name))
     } catch  {
       case e: NoSuchElementException => None
-      case e => throw e
+      case e: Throwable => throw e
     }
 }
 

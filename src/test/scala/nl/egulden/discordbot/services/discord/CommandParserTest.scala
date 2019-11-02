@@ -18,19 +18,17 @@ class CommandParserTest extends PlaySpec {
 
     "parse help command properly" in {
       CommandParser.parse("!help").left.toOption must not be empty
-      CommandParser.parse("!help").left.toOption must not be empty
-
-      CommandParser.parse("!help").left.get.command mustBe Command.Help
+      CommandParser.parse("!help").left.toOption.get.command mustBe Command.Help
     }
 
     "parse ticker command properly" in {
       CommandParser.parse("!ticker").left.toOption must not be empty
-      CommandParser.parse("!ticker").left.get.command mustBe Command.Ticker
+      CommandParser.parse("!ticker").left.toOption.get.command mustBe Command.Ticker
     }
 
     "parse mining command properly" in {
       CommandParser.parse("!mining").left.toOption must not be empty
-      CommandParser.parse("!mining").left.get.command mustBe Command.Mining
+      CommandParser.parse("!mining").left.toOption.get.command mustBe Command.Mining
     }
 
     "parse tip command properly" in {
