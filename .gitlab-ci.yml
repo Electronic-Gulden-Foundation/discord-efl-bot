@@ -4,7 +4,7 @@ stages:
   - build
 
 before_script:
-  - apk add sbt --update-cache --repository http://dl-cdn.alpinelinux.org/alpine/edge/testing
+  - apk add openjdk8 sbt --update-cache --repository http://dl-cdn.alpinelinux.org/alpine/edge/testing
   - sbt sbtVersion
   - docker version
 
