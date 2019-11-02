@@ -117,8 +117,15 @@ class TipMessageHandler @Inject()(usersService: UsersService,
     tipWalletService.withdraw(author, msg.config.address.get, msg.config.amount.get)
       .onComplete {
         case Success(Some(transaction)) =>
-          discordMessageSender.pmToAuthor(msg.message, "Je transactie wordt binnenkort verzonden!")
-          discordMessageSender.sendToAdmin(s"Gebruiker ${msg.message.getAuthor.getName} heeft een withdrawal opgevraagd")
+          discordMessageSender.pmToAuthor(
+            msg.message,
+            "Je transactie wordt binnenkort verzonden! Deze wordt eerst handmatig gecontroleerd dus dat kan even duren."
+          )
+
+          discordMessageSender.sendToAdmin(
+            s"Gebruiker ${msg.message.getAuthor.getName} heeft een withdrawal opgevraagd " +
+              s"egulden-cli sendtoaddress ${msg.config.address.get} ${msg.config.amount.get}"
+          )
 
         case Success(None) =>
           tipWalletService.getBalance(author)
