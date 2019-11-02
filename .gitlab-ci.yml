@@ -13,4 +13,6 @@ build:
   services:
     - docker:dind
   script:
-    - sbt clean test docker:publish
+    - sbt clean test
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+    - sbt docker:publish
