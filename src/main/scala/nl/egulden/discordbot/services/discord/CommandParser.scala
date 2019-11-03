@@ -46,7 +46,8 @@ object CommandParser {
     OParser.sequence(
       head(
         """
-          |Welkom bij de EFL bot! Je kunt deze bot gebruiken om een aantal statistieken te bekijken en om andere gebruikers te 'tippen' als je vind dat ze dat verdienen
+          |Welkom bij de EFL bot! Je kunt deze bot gebruiken om een aantal statistieken te bekijken en om andere
+          |gebruikers te 'tippen' als je vindt dat ze dat verdienen
           |""".stripMargin
       ),
       cmd(s"${Command.Help}")
